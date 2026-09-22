@@ -34,6 +34,7 @@ from layout import esc, render_hero, render_page
 # profiles. Order here also sets display order (in-scope profiles first).
 PROFILE_DEFINITIONS: dict[str, str] = {
     "ethwan-wifi-router": "IPv4/IPv6 router with Ethernet WAN and Wi-Fi AP features. EasyMesh features are optional.",
+    "ethwan-wifi-router-no-easymesh": "IPv4/IPv6 router with Ethernet WAN and Wi-Fi AP features. EasyMesh Controller/Agent stack not included — lower RAM floor than the full EthWAN WiFi Router profile.",
     "ext-easymesh": "Wi-Fi extender device based on EasyMesh Agent technology; supports Wi-Fi AP fronthaul and Wi-Fi/Ethernet backhaul.",
     "modem-onu": "Managed or unmanaged bridge from a WAN access technology to an Ethernet LAN port(s); may provide WAN configuration and diagnostics data. Does not include routing or Wi-Fi AP features.",
     "gw": "IPv4/IPv6 router with one or more WAN access technologies and Wi-Fi AP features.",
