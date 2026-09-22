@@ -89,18 +89,25 @@ def status_pill(status: str) -> str:
 
 
 def render_coverage_table(profiles: list[dict]) -> str:
-    # Every profile shows as not-covered here -- nothing is validated
-    # against an operationalized Core RDK Broadband build yet. Two
-    # profiles (EthWAN WiFi Router, EXT EasyMesh) do have RDK8-based
-    # target data, shown further down in "Minimum CPU, Memory, and Flash
-    # Storage (based on RDK8)" and "Profile Details (based on RDK8)" --
-    # but target data isn't the same as this-revision validation, so this
-    # table doesn't call them "in scope".
+    # Three profiles have RDK8-based target data (EthWAN WiFi Router,
+    # EthWAN WiFi Router without EasyMesh, EXT EasyMesh); the rest are
+    # defined but not yet covered in this revision.
+    RDK8_COVERED = {
+        "ethwan-wifi-router",
+        "ethwan-wifi-router-no-easymesh",
+        "ext-easymesh",
+    }
     rows = []
     for p in profiles:
         definition = PROFILE_DEFINITIONS.get(p["profileId"], "")
+        if p["profileId"] in RDK8_COVERED:
+            coverage = "RDK8 target data available \u2014 see Profile Details below"
+            coverage_style = ' style="color:#065f46;font-weight:600;"'
+        else:
+            coverage = "Defined \u2014 not covered in this revision"
+            coverage_style = ""
         rows.append(
-            "<tr><td>" + esc(p["profileName"]) + "</td><td>Defined \u2014 not covered in this revision</td><td>"
+            "<tr><td>" + esc(p["profileName"]) + "</td><td" + coverage_style + ">" + coverage + "</td><td>"
             + esc(definition) + "</td></tr>"
         )
     return (
@@ -654,9 +661,7 @@ EXTRA_CSS = """
 
 def build_page(profiles_dir: Path, repo_root: Path = None) -> str:
     profiles = load_profiles(profiles_dir)
-    # rdk8_data: the 2 profiles with real (RDK8-based target) CPU/RAM/flash
-    # and peripheral data -- still shown in their own detail sections below,
-    # just not called "in scope" anymore (see render_coverage_table).
+    # rdk8_data: the 3 profiles with RDK8-based target CPU/RAM/flash data.
     rdk8_data = [p for p in profiles if p["validationStatus"] != "not-started"]
 
     body = f'''
@@ -677,10 +682,10 @@ def build_page(profiles_dir: Path, repo_root: Path = None) -> str:
 </section>
 
 <section class="tight-top">
-  <div class="section-head"><h2>Device Profile Coverage</h2>
-    <p>The RDK-B Component List 2026 defines seven device profiles. None are validated against an
-    operationalized Core RDK Broadband build in this revision; two have RDK8-based target values
-    available below.</p>
+  <div class="section-head"><h2>Device Profile Coverage (RDK8)</h2>
+    <p>The RDK-B Component List 2026 defines seven device profiles. Three have RDK8-based target
+    values available (EthWAN WiFi Router, EthWAN WiFi Router without EasyMesh, EXT EasyMesh);
+    the rest are defined but not yet covered in this revision.</p>
   </div>
   {render_coverage_table(profiles)}
 </section>
@@ -695,7 +700,7 @@ def build_page(profiles_dir: Path, repo_root: Path = None) -> str:
 <section class="tight-top">
   <div class="section-head"><h2>Profile Details (based on RDK8)</h2>
     <p>Full CPU/memory/flash minimums and peripheral requirements, from the RDK8 Broadband Release,
-    for the two profiles with target data available.</p>
+    for the three profiles with RDK8 target data available.</p>
   </div>
   {"".join(render_profile_card(p, profiles_dir) for p in rdk8_data)}
 </section>
