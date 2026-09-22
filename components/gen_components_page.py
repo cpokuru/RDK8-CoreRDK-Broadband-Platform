@@ -30,7 +30,7 @@ from layout import render_hero, render_page  # noqa: E402
 FULL_DETAILS_URL = "full-list.html"
 
 # Same fixed/rotating palettes as gen_simple_html.py, kept in sync so the
-# type/category pill colors look identical to the rest of the components
+# tier/category pill colors look identical to the rest of the components
 # tooling (full-list.html, any other gen_simple_html.py output).
 TIER_COLORS = {
     "gold":  {"bg": "#fef3c7", "fg": "#92400e"},
@@ -48,9 +48,6 @@ CATEGORY_PALETTE = [
     {"bg": "#fce7f3", "fg": "#9d174d"},
     {"bg": "#e5e7eb", "fg": "#374151"},
 ]
-
-# Fixed style for the Layer pill (Middleware)
-LAYER_STYLE = {"bg": "#f0fdf4", "fg": "#166534"}
 
 
 def category_color(category: str) -> dict:
@@ -74,6 +71,10 @@ def build_body(data: dict) -> str:
         for t in tiers.values()
     )
 
+    # Collect unique categories and tier labels for the filter dropdowns
+    categories  = sorted({c["category"] or "Uncategorized" for c in components})
+    tier_labels = {t["id"]: t["label"] for t in tiers.values()}
+
     rows_html = []
     for c in components:
         tier = tiers.get(c["tier"], {"label": c["tier"], "color": "gray"})
@@ -88,31 +89,114 @@ def build_body(data: dict) -> str:
             ) + '</div>'
         else:
             url_cell = '<span class="muted">—</span>'
-        rows_html.append(f'''<tr>
+        # data-* attributes drive JS filtering — no server round-trip needed
+        rows_html.append(f'''<tr data-name="{esc(c["name"].lower())}" data-category="{esc(c["category"] or "Uncategorized")}" data-tier="{esc(tier["label"])}">
           <td>{esc(c["name"])}</td>
           <td><span class="pill" style="background:{cat_style["bg"]};color:{cat_style["fg"]};border-radius:8px;line-height:1.5;">{esc(c["category"] or "Uncategorized")}</span></td>
-          <td><span class="pill" style="background:{LAYER_STYLE["bg"]};color:{LAYER_STYLE["fg"]};border-radius:8px;line-height:1.5;">Middleware</span></td>
           <td><span class="pill" style="background:{tier_style["bg"]};color:{tier_style["fg"]}">{esc(tier["label"])}</span></td>
           <td>{url_cell}</td>
         </tr>''')
 
-    lede = subtitle or "Every RDK-B component for this device profile — repo, category, layer, and type."
+    # Build dropdown options
+    cat_options  = '<option value="">All categories</option>' + "".join(
+        f'<option value="{esc(c)}">{esc(c)}</option>' for c in categories)
+    tier_options = '<option value="">All tiers</option>' + "".join(
+        f'<option value="{esc(label)}">{esc(label)}</option>'
+        for label in sorted(tier_labels.values()))
+
+    filter_bar = f'''
+  <div class="comp-filter-bar">
+    <input id="comp-search" type="text" placeholder="Search components" autocomplete="off">
+    <select id="comp-cat">{cat_options}</select>
+    <select id="comp-tier">{tier_options}</select>
+    <span id="comp-count" class="comp-count"></span>
+  </div>'''
+
+    filter_script = '''
+<script>
+(function () {
+  const searchEl = document.getElementById('comp-search');
+  const catEl    = document.getElementById('comp-cat');
+  const tierEl   = document.getElementById('comp-tier');
+  const countEl  = document.getElementById('comp-count');
+  const rows     = Array.from(document.querySelectorAll('#comp-tbody tr'));
+
+  function filter() {
+    const q    = searchEl.value.trim().toLowerCase();
+    const cat  = catEl.value;
+    const tier = tierEl.value;
+    let visible = 0;
+    rows.forEach(tr => {
+      const nameMatch = !q    || tr.dataset.name.includes(q);
+      const catMatch  = !cat  || tr.dataset.category === cat;
+      const tierMatch = !tier || tr.dataset.tier === tier;
+      const show = nameMatch && catMatch && tierMatch;
+      tr.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    countEl.textContent = visible + ' of ' + rows.length + ' components';
+  }
+
+  searchEl.addEventListener('input', filter);
+  catEl.addEventListener('change', filter);
+  tierEl.addEventListener('change', filter);
+  filter(); // set initial count
+})();
+</script>
+'''
+
+    filter_css = '''
+<style>
+  .comp-filter-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .comp-filter-bar input {
+    padding: 9px 14px; border: 2px solid var(--border); border-radius: 8px;
+    font-family: inherit; font-size: 0.9rem; min-width: 200px; flex: 0 0 auto;
+    transition: border-color 0.15s;
+  }
+  .comp-filter-bar input:focus {
+    outline: none; border-color: var(--middleware);
+  }
+  .comp-filter-bar select {
+    padding: 9px 32px 9px 14px; border: 2px solid var(--border); border-radius: 8px;
+    font-family: inherit; font-size: 0.9rem; background: #fff;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235b6472' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    cursor: pointer; flex: 0 0 auto; transition: border-color 0.15s;
+  }
+  .comp-filter-bar select:focus {
+    outline: none; border-color: var(--middleware);
+  }
+  .comp-count {
+    font-size: 0.84rem; color: var(--muted); margin-left: 4px;
+  }
+</style>
+'''
+
+    lede = subtitle or "Every RDK-B component for this device profile — repo, category, and tier."
     return f'''
 {render_hero("Core RDK Components", "RDK-B EthWAN WiFi Router Components", lede, compact=True, visual_key="components")}
+
+{filter_css}
 
 <section class="tight-top">
   <p style="color:var(--muted); font-size:0.85rem; margin:0 0 14px;">
     Schema version: {esc(schema_version)} &nbsp;|&nbsp; Generated: {esc(generated_at)}
   </p>
   <div style="margin-bottom:18px;">{legend_html}</div>
+  {filter_bar}
   <table class="def-table">
-    <thead><tr><th>Name</th><th>Category</th><th>Layer</th><th>Type</th><th>Repositories</th></tr></thead>
-    <tbody>{"".join(rows_html)}</tbody>
+    <thead><tr><th>Name</th><th>Category</th><th>Tier</th><th>Repositories</th></tr></thead>
+    <tbody id="comp-tbody">{"".join(rows_html)}</tbody>
   </table>
   <p style="margin-top:18px; font-size:0.86rem;">
     For the full interactive workbook view, see the <a href="{FULL_DETAILS_URL}">detailed version</a>.
   </p>
 </section>
+{filter_script}
 '''
 
 
