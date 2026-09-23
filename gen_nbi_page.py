@@ -8,7 +8,7 @@ Unlike the other stub pages (gen_stub_pages.py), this one isn't a generic
      the North Bound API surface isn't scoped to one profile, so this list
      isn't either).
   2. Clicking a component with a known DML source fetches
-     https://raw.githubusercontent.com/cpokuru/<repo>/<branch>/<file> and
+     docs/hlapis/<repo>/<file> (local mirror; no network fetch needed) and
      renders it. Which components have a DML source, which repo, which
      branch (defaults to main), and which filename is controlled entirely
      by dml-repos.json — a component's data file doesn't have to be
@@ -39,7 +39,7 @@ SCRIPT = r"""
 <script>
 const COMPONENTS_JSON = 'components/all-components.json';
 const REPO_MAP_JSON = 'dml-repos.json';
-const RAW_BASE = 'https://raw.githubusercontent.com/cpokuru/';
+const LOCAL_BASE = 'docs/hlapis/'; // local mirror — docs/hlapis/<repo>/<file>
 
 function esc(s) {
   const d = document.createElement('div');
@@ -271,7 +271,7 @@ function renderComponentTable(filterText) {
 function loadDml(name) {
   const { repo, file, branch } = resolveRepoEntry(repoMap[name]);
   const panel = document.getElementById('dml-panel');
-  const url = RAW_BASE + repo + '/' + branch + '/' + file;
+  const url = LOCAL_BASE + repo + '/' + file; // served from docs/hlapis/<repo>/<file>
   panel.innerHTML = `
     <div class="subhead" style="margin-top:0;">${esc(name)} <span class="mono" style="font-weight:400;font-size:0.8rem;color:var(--muted);">// ${esc(repo)}</span></div>
     <p>Loading <code>${esc(url)}</code>…</p>`;
