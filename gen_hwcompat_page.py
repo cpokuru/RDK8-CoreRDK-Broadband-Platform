@@ -13,18 +13,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from layout import render_stub_page
-
-PAGE = {
-    "active_id": "hwcompat",
-    "slug": "hardware-compatibility",
-    "eyebrow": "RDK8 Hardware Compatibility",
-    "title": "Hardware Compatibility Spec",
-    "lede": (
-        "Minimum CPU, RAM, flash, and required peripheral hardware per RDK-B "
-        "device profile, validated against a BPI-R4 (MT7988/Filogic) reference platform."
-    ),
-}
+from layout import render_hero, render_page
 
 
 def build_page(profiles_dir: Path, repo_root: Path | None = None) -> str:
@@ -35,7 +24,20 @@ def build_page(profiles_dir: Path, repo_root: Path | None = None) -> str:
     compatibility information is published.
     """
     del profiles_dir, repo_root
-    return render_stub_page(PAGE)
+
+    body = render_hero(
+        "RDK8 Hardware Compatibility",
+        "Hardware Compatibility Spec",
+        (
+            "Minimum CPU, RAM, flash, and required peripheral hardware per "
+            "RDK-B device profile, validated against a BPI-R4 "
+            "(MT7988/Filogic) reference platform."
+        ),
+        compact=True,
+        visual_key="hwcompat",
+    )
+    head_extra = "<title>Hardware Compatibility Spec — RDK-B Core Broadband</title>"
+    return render_page("hwcompat", head_extra, body)
 
 
 def main() -> None:
